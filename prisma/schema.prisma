@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model UsuarioCriativo {
+  id              String        @id @default(uuid())
+  email           String?       @unique
+  username        String?       @unique
+  senha           String?
+  telefone        String?
+  pais            String?
+  estado          String?
+  cidade          String?
+  endereco        String?
+  codigoPostal    String?
+  fotoPerfil      Bytes?
+  banner          Bytes?
+  apelido         String?
+  descricaoCurta  String?
+  descricaoLonga  String?
+  tags            Tags[]
+  experiencia     Int?
+  disponibilidade String?
+  avaliacao       avaliacao[]
+  Projetos        Projeto[]
+  recomendado     UsuarioOrg[]
+  Comentarios     Comentarios[] // Comentários que o usuário criativo fez
+  Mensagens       Mensagens[]
+  Colaborador     Colaborador?  @relation(fields: [colaboradorId], references: [id])
+  colaboradorId   Int?
+  servicos        Servicos[]
+  numero          Int?
+  complemento     String?
+
+  // Comentários que foram feitos no perfil deste usuário criativo
+  perfilComentarios Comentarios[] @relation("ComentarioPerfilCriativo")
+}
+
+model UsuarioOrg {
+  id               String            @id @default(uuid())
+  email            String?           @unique
+  username         String?           @unique
+  senha            String?
+  telefone         String?
+  banner           Bytes?
+  nomeEmpresa      String?
+  tipoEmpresa      String?
+  pais             String?
+  estado           String?
+  cidade           String?
+  endereco         String?
+  codigoPostal     String?
+  fotoPerfil       Bytes?
+  descricaoCurta   String?
+  hashtag          String?
+  descricaoEmpresa String?
+  pago             Boolean?
+  tags             Tags[]
+  avaliacao        avaliacao[]
+  Projetos         Projeto[]
+  recomendado      UsuarioCriativo[]
+  Comentarios      Comentarios[] // Comentários que o usuário org fez
+  Mensagens        Mensagens[]
+
+  // Comentários que foram feitos no perfil desta organização
+  perfilComentarios Comentarios[] @relation("ComentarioPerfilOrg")
+}
+
+model Servicos {
+  id                 Int              @id @default(autoincrement())
+  titulo             String?
+  descricao          String?
+  banner             Bytes?
+  basicoTexto        String?
+  basicoPreco        Float?
+  intermediarioTexto String?
+  intermediarioPreco Float?
+  avancadoTexto      String?
+  avancadoPreco      Float?
+  comentarios        Comentarios[]
+  tags               Tags[]
+  UsuarioCriativo    UsuarioCriativo? @relation(fields: [usuarioCriativoId], references: [id])
+  usuarioCriativoId  String
+  pacote             Pacote?          @relation(fields: [pacoteId], references: [id])
+  pacoteId           Int?
+}
+
+model Pacote {
+  id             Int              @id @default(autoincrement())
+  caracteristica String
+  planos         PacoteAtributo[]
+  Servicos       Servicos[]
+}
+
+model PacoteAtributo {
+  id            Int     @id @default(autoincrement())
+  basico        String
+  intermediario String
+  avancado      String
+  Pacote        Pacote? @relation(fields: [pacoteId], references: [id])
+  pacoteId      Int?
+}
+
+model Midia {
+  id   Int    @id @default(autoincrement())
+  type String // Tipo de mídia (imagem, vídeo, etc.)
+  data Bytes // Dados binários (imagem ou vídeo)
+
+  Projeto   Projeto? @relation(fields: [projetoId], references: [id])
+  projetoId Int?
+}
+
+model Projeto {
+  id     Int     @id @default(autoincrement())
+  titulo String?
+  banner Bytes?
+  tags   Tags[]
+  likes  Int?
+  views  Int?
+
+  conteudo  Json // JSON gerado pelo Editor.js
+  midias    Midia[] // Relacionamento com múltiplos arquivos de mídia
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  criadorId     String?
+  criador       UsuarioCriativo? @relation(fields: [criadorId], references: [id])
+  org           UsuarioOrg?      @relation(fields: [usuarioOrgId], references: [id])
+  usuarioOrgId  String?
+  Comentarios   Comentarios[]
+  colaboradores Colaborador[]
+}
+
+model Colaborador {
+  id          Int               @id @default(autoincrement())
+  colaborador UsuarioCriativo[]
+  Projeto     Projeto?          @relation(fields: [projetoId], references: [id])
+  projetoId   Int?
+}
+
+model Comentarios {
+  id        String   @id @default(uuid())
+  texto     String
+  data      DateTime @default(now())
+  avaliacao Float
+
+  // Autor do comentário (um dos dois deve ser preenchido)
+  usuarioCriativoId String?
+  usuarioOrgId      String?
+
+  // Comentário pode ser direcionado para perfis, projetos ou serviços
+  autorCriativo UsuarioCriativo? @relation(fields: [usuarioCriativoId], references: [id])
+  autorOrg      UsuarioOrg?      @relation(fields: [usuarioOrgId], references: [id])
+  Projeto       Projeto?         @relation(fields: [projetoId], references: [id])
+  projetoId     Int?
+  Servicos      Servicos?        @relation(fields: [servicosId], references: [id])
+  servicosId    Int?
+
+  // Relacionamento para comentário em perfis de outros usuários
+  perfilCriativoId String?
+  perfilOrgId      String?
+  perfilCriativo   UsuarioCriativo? @relation("ComentarioPerfilCriativo", fields: [perfilCriativoId], references: [id])
+  perfilOrg        UsuarioOrg?      @relation("ComentarioPerfilOrg", fields: [perfilOrgId], references: [id])
+}
+
+model Tags {
+  id                Int              @id @default(autoincrement())
+  nome              String
+  Projeto           Projeto?         @relation(fields: [projetoId], references: [id])
+  projetoId         Int?
+  UsuarioOrg        UsuarioOrg?      @relation(fields: [usuarioOrgId], references: [id])
+  usuarioOrgId      String?
+  UsuarioCriativo   UsuarioCriativo? @relation(fields: [usuarioCriativoId], references: [id])
+  usuarioCriativoId String?
+  Servicos          Servicos?        @relation(fields: [servicosId], references: [id])
+  servicosId        Int?
+}
+
+model Mensagens {
+  id                Int              @id @default(autoincrement())
+  usuarioTipo       String
+  usuarioCriativo   UsuarioCriativo? @relation(fields: [usuarioCriativoId], references: [id])
+  usuarioOrg        UsuarioOrg?      @relation(fields: [usuarioOrgId], references: [id])
+  mensagem          String
+  data              DateTime         @default(now())
+  usuarioCriativoId String?
+  usuarioOrgId      String?
+}
+
+model avaliacao {
+  id                Int              @id @default(autoincrement())
+  avaliacaoNumero   Float
+  UsuarioCriativo   UsuarioCriativo? @relation(fields: [usuarioCriativoId], references: [id])
+  usuarioCriativoId String?
+  UsuarioOrg        UsuarioOrg?      @relation(fields: [usuarioOrgId], references: [id])
+  usuarioOrgId      String?
+}
